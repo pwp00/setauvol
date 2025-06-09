@@ -48,8 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.textContent = 'Memproses audio... Ini mungkin memakan waktu agak lama.';
 
         try {
-            // **PERBAIKAN 2: Kurva Volume Eksponensial**
-            // Ini akan membuat perubahan volume lebih terasa.
+            // kurva volume eksponensial
             const sliderValue = volumeSlider.value / 100;
             const volume = Math.pow(sliderValue, 2); 
 
@@ -71,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const renderedBuffer = await offlineContext.startRendering();
             
-            // **PERBAIKAN 1: Encode ke MP3, bukan WAV**
+            // encode ke mp3
             const mp3Blob = encodeToMp3(renderedBuffer);
 
             const url = URL.createObjectURL(mp3Blob);
@@ -96,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Fungsi baru untuk encode ke MP3 menggunakan lamejs
+    // encode to mp3 using lamejs
     function encodeToMp3(audioBuffer) {
         const channels = audioBuffer.numberOfChannels;
         const sampleRate = audioBuffer.sampleRate;
