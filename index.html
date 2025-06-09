@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengatur Volume Musik</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Pengatur Volume Audio</h1>
+            <p>Unggah file MP3 mu, atur volume, dan download hasilnya.</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <input type="file" id="audio-file" accept="audio/mpeg">
+                <label for="audio-file" class="upload-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload-cloud"><path d="M18 10a8 8 0 0 0-16 0"/><path d="M20.59 12.41a2 2 0 0 0-2.83-2.83L12 15.17l-5.76-5.59a2 2 0 0 0-2.83 2.83l7.17 7.17a2 2 0 0 0 2.83 0l7.17-7.17z"/><path d="M12 12v9"/></svg>
+                    <span>Pilih File Audio</span>
+                </label>
+                <p id="file-name" class="file-name-display"></p>
+            </div>
+
+            <div class="controls-section hidden" id="controls">
+                <div class="slider-container">
+                    <label for="volume-slider">Volume: <span id="volume-value">100%</span></label>
+                    <input type="range" id="volume-slider" min="1" max="200" value="100">
+                </div>
+                <button id="download-btn" class="download-button" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Proses & Download</span>
+                </button>
+                <div class="status-message" id="status-message"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Dibuat dengan ❤️ oleh Rugam</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
