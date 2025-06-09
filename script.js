@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fileNameDisplay.textContent = audioFile.name;
             controlsSection.classList.remove('hidden');
             statusMessage.textContent = 'Membaca file...';
+            downloadBtn.disabled = true;
 
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -44,11 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         downloadBtn.disabled = true;
-        statusMessage.textContent = 'Memproses audio...';
+        statusMessage.textContent = 'Memproses audio... Ini mungkin memakan waktu agak lama.';
 
-        const volume = volumeSlider.value / 100;
-        
         try {
+            // **PERBAIKAN 2: Kurva Volume Eksponensial**
+            // Ini akan membuat perubahan volume lebih terasa.
+            const sliderValue = volumeSlider.value / 100;
+            const volume = Math.pow(sliderValue, 2); 
+
             const offlineContext = new OfflineAudioContext(
                 audioBuffer.numberOfChannels,
                 audioBuffer.length,
@@ -66,18 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
             source.start();
 
             const renderedBuffer = await offlineContext.startRendering();
-            const wav = bufferToWave(renderedBuffer);
             
-            // Menggunakan tipe 'audio/mpeg' agar sesuai ekstensi .mp3
-            const blob = new Blob([wav], { type: 'audio/mpeg' });
+            // **PERBAIKAN 1: Encode ke MP3, bukan WAV**
+            const mp3Blob = encodeToMp3(renderedBuffer);
 
-            const url = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(mp3Blob);
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
 
-            // Membuat nama file baru sesuai format yang diminta
-            const originalName = audioFile.name.replace(/\.[^/.]+$/, ""); // Hapus ekstensi lama
+            const originalName = audioFile.name.replace(/\.[^/.]+$/, "");
             const newFileName = `${originalName}_${volumeSlider.value}x.mp3`;
             a.download = newFileName;
             
@@ -85,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             window.URL.revokeObjectURL(url);
             
-            statusMessage.textContent = 'Audio berhasil diproses dan didownload!';
+            statusMessage.textContent = 'Audio berhasil diproses dan diunduh!';
         } catch (error) {
             console.error('Error processing audio:', error);
             statusMessage.textContent = 'Terjadi kesalahan saat memproses audio.';
@@ -94,45 +96,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Fungsi untuk mengonversi AudioBuffer ke format WAV
-    function bufferToWave(abuffer) {
-        let numOfChan = abuffer.numberOfChannels,
-            length = abuffer.length * numOfChan * 2 + 44,
-            buffer = new ArrayBuffer(length),
-            view = new DataView(buffer),
-            channels = [], i, sample, offset = 0, pos = 0;
+    // Fungsi baru untuk encode ke MP3 menggunakan lamejs
+    function encodeToMp3(audioBuffer) {
+        const channels = audioBuffer.numberOfChannels;
+        const sampleRate = audioBuffer.sampleRate;
+        const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128); // 128kbps bitrate
+        const mp3Data = [];
 
-        setUint32(0x46464952); // "RIFF"
-        setUint32(length - 8); // file length - 8
-        setUint32(0x45564157); // "WAVE"
-
-        setUint32(0x20746d66); // "fmt " chunk
-        setUint32(16); // length = 16
-        setUint16(1); // PCM (uncompressed)
-        setUint16(numOfChan);
-        setUint32(abuffer.sampleRate);
-        setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-        setUint16(numOfChan * 2); // block-align
-        setUint16(16); // 16-bit
-
-        setUint32(0x61746164); // "data" - chunk
-        setUint32(length - pos - 4); // chunk length
-
-        for (i = 0; i < abuffer.numberOfChannels; i++)
-            channels.push(abuffer.getChannelData(i));
-
-        while (pos < length) {
-            for (i = 0; i < numOfChan; i++) {
-                sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                view.setInt16(pos, sample, true);
-                pos += 2;
-            }
-            offset++;
+        const samples = new Int16Array(audioBuffer.getChannelData(0).length);
+        for (let i = 0; i < samples.length; i++) {
+            samples[i] = Math.max(-1, Math.min(1, audioBuffer.getChannelData(0)[i])) * 32767;
         }
-        return buffer;
 
-        function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
-        function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+        let left, right;
+        if (channels === 2) {
+            left = new Int16Array(audioBuffer.getChannelData(0).length);
+            right = new Int16Array(audioBuffer.getChannelData(1).length);
+            for (let i = 0; i < audioBuffer.length; i++) {
+                left[i] = Math.max(-1, Math.min(1, audioBuffer.getChannelData(0)[i])) * 32767;
+                right[i] = Math.max(-1, Math.min(1, audioBuffer.getChannelData(1)[i])) * 32767;
+            }
+        } else { // Mono
+            left = samples;
+        }
+
+        const bufferSize = 1152;
+        for (let i = 0; i < samples.length; i += bufferSize) {
+            const leftChunk = left.subarray(i, i + bufferSize);
+            let rightChunk = null;
+            if (channels === 2) {
+                rightChunk = right.subarray(i, i + bufferSize);
+            }
+            const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+            if (mp3buf.length > 0) {
+                mp3Data.push(mp3buf);
+            }
+        }
+        const mp3buf = mp3encoder.flush();
+        if (mp3buf.length > 0) {
+            mp3Data.push(mp3buf);
+        }
+
+        return new Blob(mp3Data, { type: 'audio/mpeg' });
     }
 });
